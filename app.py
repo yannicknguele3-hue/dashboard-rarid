@@ -1,7 +1,6 @@
 from datetime import datetime
 import matplotlib.pyplot as plt
 import pandas as pd
-from st_autorefresh import st_autorefresh
 import streamlit as st
 
 # Configuration de la page
@@ -10,10 +9,6 @@ st.set_page_config(
 )
 
 NOM_FICHIER = "Tableau_de_Bord_Campagnes_Appel_Contributions_v3 ok.xlsm"
-
-# --- ACTUALISATION AUTOMATIQUE TOUTES LES 30 SECONDES ---
-# La fonction st_autorefresh retourne un compteur incrémenté à chaque rafraîchissement
-count = st_autorefresh(interval=30000, key="datarefresh")
 
 
 # --- Fonction de chargement (SANS CACHE pour lecture fraîche à chaque appel) ---
@@ -31,13 +26,15 @@ def load_data():
 
 
 # --- Horodatage de la dernière lecture ---
-st.session_state.last_refresh = datetime.now()
+if "last_refresh" not in st.session_state:
+  st.session_state.last_refresh = datetime.now()
 
 # Affichage de l'heure + bouton de rafraîchissement manuel
 col_refresh, col_info = st.columns([1, 5])
 with col_refresh:
   if st.button("🔄 Forcer le rechargement maintenant"):
-    st.rerun()
+    st.session_state.last_refresh = datetime.now()
+    st.rerun()  # Recharge immédiatement la page
 
 with col_info:
   st.caption(
@@ -50,12 +47,8 @@ try:
 
   st.title("📊 RARID Journal - Suivi des Contributions")
 
-  # --- BARRE LATÉRALE (FILTRES & STATUT) ---
+  # --- BARRE LATÉRALE (FILTRES) ---
   st.sidebar.header("🎛️ Filtres")
-
-  # Indicateur visuel d'actualisation dans la sidebar
-  st.sidebar.success(f"🟢 Synchro auto active (Cycle n°{count})")
-  st.sidebar.markdown("---")
 
   if "Priorité" in df.columns:
     priorite_opt = ["Toutes"] + list(df["Priorité"].dropna().unique())
@@ -119,7 +112,7 @@ try:
     )
     ax.axis("equal")
     st.pyplot(fig)
-    plt.close(fig)  # Sécurité mémoire
+    plt.close(fig)  # Sécurité pour libérer la mémoire
 
   st.divider()
 
